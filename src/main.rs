@@ -69,7 +69,7 @@ fn main_logic(player: &Player) -> Result<(), FormatError> {
     log::info!("Formatted metadata: {}", formatted_metadata);
 
     // Get lyrics
-    let audio_path =
+    let audio_path_cow =
         match urlencoding::decode(match metadata.url().unwrap_or("/").split("://").last() {
             Some(i) => i,
             None => {
@@ -80,11 +80,12 @@ fn main_logic(player: &Player) -> Result<(), FormatError> {
             Ok(i) => i,
             Err(i) => {
                 log::warn!("Failed to find audio path: {}", i);
-                return Err(FormatError::AudioNotFoundError(i));
+                return Err(FormatError::AudioNotFoundError(Box::new(i)));
             }
         };
-    log::info!("Audio path: {}", audio_path);
-    let audio_path = std::path::Path::new(&audio_path);
+    log::info!("Audio path: {}", audio_path_cow);
+    let audio_path_binding = audio_path_cow.into_owned();
+    let audio_path = std::path::Path::new(&audio_path_binding);
     let lyrics = get_lyrics(audio_path);
     print_lyrics(
         &std::path::Path::new("/tmp/lyrics"),
@@ -209,7 +210,7 @@ fn print_lyrics(
 fn output(text: &str, tooltip: &str) -> String {
     format!("{{\"text\": \"{}\", \"tooltip\": \"{}\"}}", text, tooltip)
 }
-fn find_player<'a>() -> Result<mpris::Player<'a>, ()> {
+fn find_player() -> Result<mpris::Player, ()> {
     mpris::PlayerFinder::new()
         .map_err(|x| {
             log::error!("Error when finding mpris player: {}", x);

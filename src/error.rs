@@ -1,6 +1,5 @@
 use mpris::DBusError;
 use thiserror::Error;
-use urlencoding::FromUrlEncodingError;
 
 #[derive(Error, Debug)]
 pub enum FormatError {
@@ -11,5 +10,5 @@ pub enum FormatError {
     #[error("Failed to parse audio path.")]
     AudioParseError,
     #[error("Failed to find audio path: {0}")]
-    AudioNotFoundError(FromUrlEncodingError),
+    AudioNotFoundError(Box<dyn std::error::Error>),
 }
