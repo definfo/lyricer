@@ -33,8 +33,8 @@ impl Lyric {
                 continue;
             }
             // This implementation will break if the metadata contains '.' and ":"
-            if !metadata_parse_completed
-                && !(i[..i.find(']').unwrap()].contains('.')
+            if !(metadata_parse_completed
+                || i[..i.find(']').unwrap()].contains('.')
                     && i[..i.find(']').unwrap()].contains(':'))
             {
                 let mut metadata_segment =
@@ -84,17 +84,15 @@ impl LyricsType {
         }
         let (raw_duration, raw_string) = if let Self::Standard(i, j) = line {
             (i, j)
+        } else if let Self::Enhanced(_, _) = line {
+            return Err(());
         } else {
-            if let Self::Enhanced(_, _) = line {
-                return Err(());
-            } else {
-                return Err(());
-            }
+            return Err(());
         };
         let mut parsed_string = Vec::new();
         let (mut offset, mut duration) = (0, None);
         let raw_string = raw_string.trim();
-        for x in raw_string.chars().into_iter().enumerate() {
+        for x in raw_string.chars().enumerate() {
             if x.1 == '<' {
                 //The previous one is a lyric
                 if !raw_string[0..x.0].trim().is_empty() {
@@ -108,7 +106,7 @@ impl LyricsType {
                 offset = x.0 + 1;
             }
         }
-        let duration = std::mem::replace(raw_duration, std::time::Duration::default());
+        let duration = std::mem::take(raw_duration);
         Ok(Self::Enhanced(duration, parsed_string.into_boxed_slice()))
     }
     pub fn parse_line(line: &mut String) -> Result<Self, ()> {

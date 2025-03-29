@@ -26,10 +26,11 @@ fn main() -> Result<()> {
             let res = main_logic(&player);
             match res {
                 Ok(_) => {}
-                Err(e) => match e {
-                    FormatError::PlayerStopped => break 'inner,
-                    _ => {}
-                },
+                Err(e) => {
+                    if let FormatError::PlayerStopped = e {
+                        break 'inner;
+                    }
+                }
             }
         }
         // When there's no available player, remove possible files
@@ -88,12 +89,12 @@ fn main_logic(player: &Player) -> Result<(), FormatError> {
     let audio_path = std::path::Path::new(&audio_path_binding);
     let lyrics = get_lyrics(audio_path);
     print_lyrics(
-        &std::path::Path::new("/tmp/lyrics"),
+        std::path::Path::new("/tmp/lyrics"),
         lyrics,
         &formatted_metadata,
         audio_ending,
         player.get_position().ok(),
-        &player,
+        player,
     );
     Ok(())
 }
@@ -141,7 +142,7 @@ fn print_lyrics(
         }
     };
     is_current_audio();
-    let small_duration = if lyrics.is_err() { true } else { false };
+    let small_duration = lyrics.is_err();
     let real_lyrics = match lyrics {
         Ok(i) => i.content,
         Err(_) => Box::new([lyric::LyricsType::Standard(
@@ -172,10 +173,8 @@ fn print_lyrics(
         }
         if small_duration {
             std::thread::sleep(std::time::Duration::from_secs(1))
-        } else {
-            duration
-                .checked_sub(current_duration)
-                .map(|x| std::thread::sleep(x));
+        } else if let Some(a) = duration.checked_sub(current_duration) {
+            std::thread::sleep(a)
         }
         if !player_handle.is_running() {
             log::warn!("Player is not running. Stopping...");
@@ -198,13 +197,13 @@ fn print_lyrics(
             current_duration = duration.to_owned()
         }
         let mut file = std::fs::File::create(target_file).expect("Create failed");
-        file.write_all(&format!("{}", output(&lyric, formatted_metadata)).as_bytes())
+        file.write_all(output(&lyric, formatted_metadata).to_string().as_bytes())
             .expect("Cannot write metadata into file");
     }
     if let Some(audio_ending) = audio_ending {
-        audio_ending
-            .checked_sub(current_duration)
-            .map(|x| std::thread::sleep(x));
+        if let Some(a) = audio_ending.checked_sub(current_duration) {
+            std::thread::sleep(a)
+        }
     }
 }
 fn output(text: &str, tooltip: &str) -> String {
