@@ -1,0 +1,46 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1741379970,
+        "narHash": "sha256-Wh7esNh7G24qYleLvgOSY/7HlDUzWaL/n4qzlBePpiw=",
+        "rev": "36fd87baa9083f34f7f5027900b62ee6d09b1f2f",
+        "revCount": 764203,
+        "type": "tarball",
+        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.1.764203%2Brev-36fd87baa9083f34f7f5027900b62ee6d09b1f2f/019577ad-bac9-7724-b07e-ce4b1e4cb48c/source.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://flakehub.com/f/NixOS/nixpkgs/0.1.%2A.tar.gz"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "rust-overlay": "rust-overlay"
+      }
+    },
+    "rust-overlay": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1741400194,
+        "narHash": "sha256-tEpgT+q5KlGjHSm8MnINgTPErEl8YDzX3Eps8PVc09g=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "16b6045a232fea0e9e4c69e55a6e269607dd8e3f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
