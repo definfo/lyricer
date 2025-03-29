@@ -1,6 +1,6 @@
 #[derive(Debug)]
 pub struct Lyric {
-    pub metadata: std::collections::HashMap<Box<str>, Box<str>>,
+    pub _metadata: std::collections::HashMap<Box<str>, Box<str>>,
     pub content: Box<[LyricsType]>,
 }
 impl Lyric {
@@ -50,7 +50,7 @@ impl Lyric {
             }
         }
         Ok(Self {
-            metadata,
+            _metadata: metadata,
             content: content.into_boxed_slice(),
         })
     }

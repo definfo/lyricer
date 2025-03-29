@@ -1,79 +1,102 @@
+use anyhow::Result;
+use std::io::Write;
+
+use error::FormatError;
+use mpris::Player;
+
+mod error;
 mod lyric;
+
 const ERROR_LOOP_DURATION: std::time::Duration = std::time::Duration::from_secs(1);
-fn main() {
+
+fn main() -> Result<()> {
     pretty_env_logger::init();
     log::warn!("Lyricer started.");
-    loop {
+
+    'outer: loop {
         let player = match find_player() {
             Ok(i) => i,
             Err(_) => {
                 log::warn!("Player not found.");
                 std::thread::sleep(ERROR_LOOP_DURATION);
-                continue;
+                continue 'outer;
             }
         };
-        loop {
-            if !player.is_running() {
-                log::warn!("Player has stopped. Tryning to find a new player..");
-                break;
+        'inner: loop {
+            let res = main_logic(&player);
+            match res {
+                Ok(_) => {}
+                Err(e) => match e {
+                    FormatError::PlayerStopped => break 'inner,
+                    _ => {}
+                },
             }
-            // Get metadata
-            let metadata = match player.get_metadata() {
-                Ok(i) => i,
-                Err(i) => {
-                    log::error!("Error when fetching metdata: {}", i);
-                    std::thread::sleep(ERROR_LOOP_DURATION);
-                    continue;
-                }
-            };
-            log::debug!("Metata found: {:?}", metadata);
-            let audio_ending = metadata.length();
-            log::debug!("Audio length: {:?}", audio_ending);
-            let mut formatted_metadata = metadata.title().unwrap_or("[Unknown]").to_string();
-            if let Some(i) = audio_ending {
-                formatted_metadata.push_str(&format!(" ({:#?})", i));
-            }
-            if let Some(i) = metadata.artists() {
-                if !i.is_empty() {
-                    formatted_metadata.push_str(&format!("by {}", i.join(", ")));
-                }
-            }
-            log::info!("Formatted metadata: {}", formatted_metadata);
-            // Get lyrics
-            let audio_path =
-                match urlencoding::decode(match metadata.url().unwrap_or("/").split("://").last() {
-                    Some(i) => i,
-                    None => {
-                        log::warn!("Failed to parse audio path.");
-                        std::thread::sleep(ERROR_LOOP_DURATION);
-                        continue;
-                    }
-                }) {
-                    Ok(i) => i,
-                    Err(i) => {
-                        log::warn!("Failed to find audio path: {}", i);
-                        std::thread::sleep(ERROR_LOOP_DURATION);
-                        continue;
-                    }
-                };
-            log::info!("Audio path: {}", audio_path);
-            let audio_path = std::path::Path::new(&audio_path);
-            let lyrics = get_lyrics(audio_path);
-            print_lyrics(
-                &std::path::Path::new("/tmp/lyrics"),
-                lyrics,
-                &formatted_metadata,
-                audio_ending,
-                player.get_position().ok(),
-                &player,
-            );
         }
         // When there's no available player, remove possible files
-        if std::path::Path::new("/tmp/lyrics").is_file() {
-            std::fs::remove_file("/tmp/lyrics").unwrap();
-        }
+        clean_up();
     }
 }
+
+fn main_logic(player: &Player) -> Result<(), FormatError> {
+    // Check if player is running
+    if !player.is_running() {
+        log::warn!("Player has stopped. Tryning to find a new player..");
+        return Err(FormatError::PlayerStopped);
+    }
+
+    // Get metadata
+    let metadata = match player.get_metadata() {
+        Ok(i) => i,
+        Err(i) => {
+            log::warn!("Error when fetching metadata: {}", i);
+            return Err(FormatError::MetadataError(i));
+        }
+    };
+    log::debug!("Metadata found: {:?}", metadata);
+
+    // Parse metadata
+    let audio_ending = metadata.length();
+    log::debug!("Audio length: {:?}", audio_ending);
+    let mut formatted_metadata = metadata.title().unwrap_or("[Unknown]").to_string();
+    if let Some(i) = audio_ending {
+        formatted_metadata.push_str(&format!(" ({:#?})", i));
+    }
+    if let Some(i) = metadata.artists() {
+        if !i.is_empty() {
+            formatted_metadata.push_str(&format!("by {}", i.join(", ")));
+        }
+    }
+    log::info!("Formatted metadata: {}", formatted_metadata);
+
+    // Get lyrics
+    let audio_path =
+        match urlencoding::decode(match metadata.url().unwrap_or("/").split("://").last() {
+            Some(i) => i,
+            None => {
+                log::warn!("Failed to parse audio path.");
+                return Err(FormatError::AudioParseError);
+            }
+        }) {
+            Ok(i) => i,
+            Err(i) => {
+                log::warn!("Failed to find audio path: {}", i);
+                return Err(FormatError::AudioNotFoundError(i));
+            }
+        };
+    log::info!("Audio path: {}", audio_path);
+    let audio_path = std::path::Path::new(&audio_path);
+    let lyrics = get_lyrics(audio_path);
+    print_lyrics(
+        &std::path::Path::new("/tmp/lyrics"),
+        lyrics,
+        &formatted_metadata,
+        audio_ending,
+        player.get_position().ok(),
+        &player,
+    );
+    Ok(())
+}
+
 fn get_lyrics(audio_path: &std::path::Path) -> Result<lyric::Lyric, ()> {
     if audio_path.is_file() {
         let mut lyric_name = std::path::PathBuf::from(&audio_path);
@@ -173,11 +196,9 @@ fn print_lyrics(
             log::warn!("Player does not implement position command. Subtitle might not synced.");
             current_duration = duration.to_owned()
         }
-        std::fs::write(
-            target_file,
-            &format!("{}", output(&lyric, formatted_metadata)),
-        )
-        .unwrap();
+        let mut file = std::fs::File::create(target_file).expect("Create failed");
+        file.write_all(&format!("{}", output(&lyric, formatted_metadata)).as_bytes())
+            .expect("Cannot write metadata into file");
     }
     if let Some(audio_ending) = audio_ending {
         audio_ending
@@ -197,4 +218,10 @@ fn find_player<'a>() -> Result<mpris::Player<'a>, ()> {
         .map_err(|x| {
             log::error!("Error when finding active player: {}", x);
         })
+}
+
+fn clean_up() {
+    if std::path::Path::new("/tmp/lyrics").is_file() {
+        std::fs::remove_file("/tmp/lyrics").expect("Failed to remove file");
+    }
 }

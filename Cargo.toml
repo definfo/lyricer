@@ -16,6 +16,9 @@ mpris = "1.1"
 urlencoding = "1.1"
 log = { version = "0.4", features = ["release_max_level_error"] }
 pretty_env_logger = "0.4"
+anyhow = "1.0.97"
+thiserror = "2.0.12"
+signal-hook = "0.3.17"
 
 [features]
 default = ["multiline-lrc"]
