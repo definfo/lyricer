@@ -3,4 +3,3 @@
 # https://rust-lang.github.io/rustup/concepts/profiles.html
 channel = "stable"
 profile = "default"
-

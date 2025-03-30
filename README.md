@@ -1,6 +1,6 @@
 # Lyricer
 
-Lyricer is an addon for waybar to display lyrics.
+Lyricer is an addon for waybar to display lyrics (continuation of [moelife-coder/lyricer](https://github.com/moelife-coder/lyricer.git)).
 
 ## Features
 
@@ -38,7 +38,7 @@ Add following lines to your `waybar` configuration:
 }
 ```
 
-And don't forget to start `lyricer` in the background, preferrably with sway configutation.
+And don't forget to start `lyricer` in the background, preferrably with Sway/Hyprland configuration.
 
 ## Why it's too laggy?
 
@@ -48,15 +48,25 @@ Sometime the lyric will also lag regardless user interaction. The reason behind 
 
 ## TODOs
 
+Currently this repo is under construction including but not limited to:
+
+1. [x] Better error handling
+
+2. [] Signal handling, fix tempfile removal on termination
+
+3. [] Review and scrutinize `.unwrap()` usages, deal with UTF-8 BOM compatibility
+
 The following features are either planning or currently unable to archive:
 
 1. Control media (pause, resume, next, previous) with buttons
+
+Update: A similar function may have already been implemented for waybar?
 
 2. Colorful output
 
 3. More lyrics support (less error-prone)
 
-4. Fix laggy performance
+4. Fix laggy performance (TODO: add perf test)
 
 5. Manual selection of lyric file
 
